@@ -1,0 +1,112 @@
+/************************************************************************/
+/*                                                                      */
+/*  AdaptorClass.h  MRF24-G Adaptor specific code                       */
+/*                                                                      */
+/************************************************************************/
+/*  Author: Keith Vogel                                                 */
+/*          Copyright 2013, Digilent Inc.                               */
+/************************************************************************/
+/* 
+*
+* Copyright (c) 2013-2014, Digilent <www.digilentinc.com>
+* Contact Digilent for the latest version.
+*
+* This program is free software; distributed under the terms of 
+* BSD 3-clause license ("Revised BSD License", "New BSD License", or "Modified BSD License")
+*
+* Redistribution and use in source and binary forms, with or without modification,
+* are permitted provided that the following conditions are met:
+*
+* 1.    Redistributions of source code must retain the above copyright notice, this
+*        list of conditions and the following disclaimer.
+* 2.    Redistributions in binary form must reproduce the above copyright notice,
+*        this list of conditions and the following disclaimer in the documentation
+*        and/or other materials provided with the distribution.
+* 3.    Neither the name(s) of the above-listed copyright holder(s) nor the names
+*        of its contributors may be used to endorse or promote products derived
+*        from this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+* OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+/************************************************************************/
+/*  Module Description:                                                 */
+/*                                                                      */
+/*      This MRF24-G Adaptor specific code                              */
+/*                                                                      */
+/************************************************************************/
+/*  Revision History:                                                   */
+/*                                                                      */
+/*  10/16/2012(KeithV): Created                                         */
+/*                                                                      */
+/************************************************************************/
+#ifndef MRF24G_AC
+#define MRF24G_AC
+
+#include <DEIPcK.h>
+#include <DEWFcK.h>
+
+#ifdef __cplusplus
+
+#define WPACALPSK
+
+class DEMRF24 : public DEWFcK
+{
+private:
+    virtual const NWADP * deIPGetAdaptor(void);
+    virtual const NWWF *  deWFGetWF();
+
+public:
+    bool wpaCalPSK(const char * szSsid, const char * szPassphrase, WPA2KEY& wpaKey);
+};
+
+// this is to init the code and is place in DEIPcK.cpp
+// it is specific for the default adaptor we are using
+#ifdef DEIPINCLUDECODEHERE
+DEMRF24 deIPcK;
+#endif // DEIPINCLUDECODEHERE
+
+extern DEMRF24 deIPcK;
+
+// this needs to be big enough for an ipStack, plus some payloads of 576 or more
+// this is used by the adaptor and must be defined when getting the adaptor
+#define cbAdpHeap   4096
+
+// Specifies how big the ARP Cache should be. Should be at least 2 more like 5 or more
+// this is defined when the Link Layer Adaptor is created.
+#define cARPEntries 10
+#define cbrgbLLARPMem LLGetIPv4ARPMemSize(cARPEntries)
+
+// RAM Page Manager constants for the default socket buffers
+// 512 byte page manager 1<<6 = 64 * 128 = 8192
+#define pfSocketBuffer 6            // 1<<6 == 64 byte pages
+#define cPagesSocketBuffer 128      // 128 pages
+#define cbrgbSocketBufferPageMGR RAMGetPMGRSize(cPagesSocketBuffer, pfSocketBuffer)
+
+// DHCP / DNS / SNTP RAM page manager
+// the page manager set aside for use for the system DHCP, DNS, NTP UDP socket buffers
+// 512 byte page manager 1<<6 = 64 * 15 = 960
+// Here is how we got 15 pages. DHCP are big packets very close to 576 bytes, required
+// packet to be sent by a router. DHCP is typically 548 bytes; often. So 576 / 65 = 9 pages.
+// Each service (DHCP, DNS, SNTP) requires a page for the indirect streams, so 3 more. And because a page can wrap
+// and the start of a page could be unsued, each of the 3 services could need an extra page, so 3 more.
+// a total of 9+3+3 = 15 pages.
+#define pfDhcpDnsNtp        6   // 1<<6 == 64 byte pages
+#define cPagesDhcpDnsNtp    15  // 15 pages
+#define cbrgbDhcpDnsNtpPageMGR RAMGetPMGRSize(cPagesDhcpDnsNtp, pfDhcpDnsNtp)
+
+// Define how many DNS servers we will support and reserve the space for it
+#define cDNSServers 4
+#define cbrgbDNSMem DNSMemorySize(cDNSServers)
+
+#endif // C++
+
+#endif // MRF24G_AC
